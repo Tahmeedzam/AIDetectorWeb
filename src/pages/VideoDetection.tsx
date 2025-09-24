@@ -55,10 +55,13 @@ const VideoDetection = () => {
       formData.append("file", selectedFile);
 
       // 🚀 Send video to your FastAPI backend instead of Sightengine
-      const response = await fetch("http://127.0.0.1:8000/detect-video", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+  "https://video-detection-backend.onrender.com/detect-video",
+  {
+    method: "POST",
+    body: formData,
+  }
+);
 
       if (!response.ok) {
         throw new Error(`Backend error: ${response.status}`);

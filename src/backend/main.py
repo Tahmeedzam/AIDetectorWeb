@@ -6,10 +6,10 @@ import os
 
 app = FastAPI()
 
-# Allow frontend (localhost:3000) to call backend
+# Allow frontend to access backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # for dev, you can restrict later
+    allow_origins=["*"],  # or restrict to your Netlify site
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,7 +39,7 @@ async def detect_video(file: UploadFile = File(...)):
 
     frames = result.get("data", {}).get("frames", [])
     avg_ai_score = sum(frame["type"]["ai_generated"] for frame in frames) / len(frames) if frames else 0
-    is_ai = avg_ai_score > 0.5  # choose threshold
+    is_ai = avg_ai_score > 0.5  # threshold
 
     return {
         "filename": file.filename,
