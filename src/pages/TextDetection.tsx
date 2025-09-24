@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText } from "lucide-react";
 import DetectionResult from "@/components/DetectionResult";
-import ApiWarning from "@/components/ApiWarning";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -94,8 +93,6 @@ const TextDetection = () => {
               Analyze text content to detect AI-generated writing patterns
             </p>
           </div>
-
-          <ApiWarning />
 
           <Card>
             <CardHeader>

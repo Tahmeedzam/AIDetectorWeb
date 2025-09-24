@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Image as ImageIcon, Upload } from "lucide-react";
 import DetectionResult from "@/components/DetectionResult";
-import ApiWarning from "@/components/ApiWarning";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -157,8 +156,6 @@ const ImageDetection = () => {
               Upload an image to detect AI-generated or manipulated content
             </p>
           </div>
-
-          <ApiWarning />
 
           <Card>
             <CardHeader>
