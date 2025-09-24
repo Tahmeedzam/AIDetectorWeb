@@ -4,15 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Video, Upload } from "lucide-react";
 import DetectionResult from "@/components/DetectionResult";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const VideoDetection = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [result, setResult] = useState<{
-    isAI: boolean;
-    confidence: number;
-    additionalInfo?: string;
-  } | null>(null);
+  const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -20,7 +15,7 @@ const VideoDetection = () => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('video/')) {
+      if (!file.type.startsWith("video/")) {
         toast({
           title: "Error",
           description: "Please select a valid video file",
@@ -28,16 +23,16 @@ const VideoDetection = () => {
         });
         return;
       }
-      
-      if (file.size > 100 * 1024 * 1024) { // 100MB limit
+
+      if (file.size > 100 * 1024 * 1024) {
         toast({
           title: "Error",
-          description: "Video file must be smaller than 100MB",
+          description: "Video must be smaller than 100MB",
           variant: "destructive",
         });
         return;
       }
-      
+
       setSelectedFile(file);
       setResult(null);
     }
@@ -47,53 +42,46 @@ const VideoDetection = () => {
     if (!selectedFile) {
       toast({
         title: "Error",
-        description: "Please select a video to analyze",
+        description: "Please select a video first",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
+
     try {
-      // For video, we'd need to extract frames client-side or use a backend
-      // Since this is a frontend prototype, we'll simulate the process
-      
-      // Simulate frame extraction and API calls
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // In a real implementation, you'd:
-      // 1. Extract frames using canvas/video element
-      // 2. Send each frame to Sightengine API
-      // 3. Aggregate results
-      
-      const estimatedDuration = 30; // Mock duration
-      const framesProcessed = Math.ceil(estimatedDuration / 5);
-      
-      // Simulate multiple API calls to Sightengine for frames
-      const confidence = Math.random();
-      const isAI = confidence > 0.5;
-      const verdict = isAI ? "AI Generated" : "Real Video";
-      
-      // Save to Supabase
-      await supabase.from('detection_results').insert({
-        content_type: 'video',
-        file_name: selectedFile.name,
-        file_size: selectedFile.size,
-        ai_score: confidence,
-        ai_verdict: verdict,
-        analysis_details: { frames_processed: framesProcessed, estimated_duration: estimatedDuration, file_type: selectedFile.type }
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      // 🚀 Send video to your FastAPI backend instead of Sightengine
+      const response = await fetch("http://127.0.0.1:8000/detect-video", {
+        method: "POST",
+        body: formData,
       });
-      
+
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Backend video analysis result:", data);
+
       setResult({
-        isAI,
-        confidence,
-        additionalInfo: `Video analysis simulated. Would process ${framesProcessed} frames via Sightengine API (1 frame every 5 seconds). File size: ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB. Note: Frame extraction requires backend implementation.`,
+        isAI: data.ai_detected ?? false,
+        confidence: data.confidence ?? 0,
+        additionalInfo: `Frames analyzed: ${data.frames_checked}, File: ${data.filename}`,
       });
-    } catch (error) {
-      console.error("API Error:", error);
+
+      toast({
+        title: "Success",
+        description: "Video analyzed successfully",
+      });
+    } catch (error: any) {
+      console.error("Error analyzing video:", error);
       toast({
         title: "Error",
-        description: "Failed to analyze video. Frame extraction requires backend processing.",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -119,7 +107,7 @@ const VideoDetection = () => {
               Video AI Detection
             </h1>
             <p className="text-muted-foreground">
-              Upload a video to detect AI-generated content through frame analysis
+              Upload a video to detect AI-generated content
             </p>
           </div>
 
@@ -127,7 +115,7 @@ const VideoDetection = () => {
             <CardHeader>
               <CardTitle>Upload Video</CardTitle>
               <CardDescription>
-                Select a video file (MP4, MOV, AVI) up to 100MB for analysis
+                Supports MP4, MOV, AVI up to 100MB
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -138,8 +126,8 @@ const VideoDetection = () => {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              
-              <div 
+
+              <div
                 onClick={triggerFileSelect}
                 className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
               >
@@ -162,27 +150,15 @@ const VideoDetection = () => {
                     <div>
                       <p className="text-lg font-medium">Click to upload video</p>
                       <p className="text-sm text-muted-foreground">
-                        Supports MP4, MOV, AVI up to 100MB
+                        MP4, MOV, AVI up to 100MB
                       </p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {selectedFile && (
-                <div className="bg-muted p-4 rounded-lg text-sm">
-                  <p className="font-medium mb-2">Analysis Process:</p>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• Extract 1 frame every 5 seconds</li>
-                    <li>• Analyze each frame for AI patterns</li>
-                    <li>• Calculate overall confidence score</li>
-                    <li>• Processing time: ~30 seconds</li>
-                  </ul>
-                </div>
-              )}
-
-              <Button 
-                onClick={analyzeVideo} 
+              <Button
+                onClick={analyzeVideo}
                 disabled={loading || !selectedFile}
                 className="w-full"
               >
@@ -191,11 +167,11 @@ const VideoDetection = () => {
             </CardContent>
           </Card>
 
-          {(result || loading) && (
+          {result && (
             <DetectionResult
-              isAI={result?.isAI || false}
-              confidence={result?.confidence || 0}
-              additionalInfo={result?.additionalInfo}
+              isAI={result.isAI}
+              confidence={result.confidence}
+              additionalInfo={result.additionalInfo}
               loading={loading}
             />
           )}

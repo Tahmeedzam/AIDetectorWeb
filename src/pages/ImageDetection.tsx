@@ -39,67 +39,102 @@ const ImageDetection = () => {
   };
 
   const analyzeImage = async () => {
-    if (!selectedFile) {
-      toast({
-        title: "Error",
-        description: "Please select an image to analyze",
-        variant: "destructive",
-      });
-      return;
+  if (!selectedFile) {
+    toast({
+      title: "Error",
+      description: "Please select an image to analyze",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // Convert image to base64 for storage
+    const reader = new FileReader();
+    const base64Promise = new Promise<string>((resolve) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(selectedFile);
+    });
+    
+    const base64Image = await base64Promise;
+    
+    // Call Sightengine API for real AI detection
+    const formData = new FormData();
+    formData.append('media', selectedFile);
+    formData.append('models', 'genai'); // AI-generated content detection model
+    // formData.append('api_user', process.env.REACT_APP_SIGHTENG_USER || '334590953');
+    // formData.append('api_secret', process.env.REACT_APP_SIGHTENG_SECRET || '5GyUFfJAudt94pBYuxJYZYs6jJnAtjcu');
+    formData.append('api_user', '334590953');
+    formData.append('api_secret','5GyUFfJAudt94pBYuxJYZYs6jJnAtjcu');
+
+    const sightengineResponse = await fetch('https://api.sightengine.com/1.0/check.json', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!sightengineResponse.ok) {
+      throw new Error(`Sightengine API error: ${sightengineResponse.status}`);
     }
 
-    setLoading(true);
-    try {
-      // Convert image to base64 for storage
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(selectedFile);
-      });
-      
-      const base64Image = await base64Promise;
-      
-      // Mock AI detection (replace with real API when available)
-      const confidence = Math.random();
-      const isAI = confidence > 0.5;
-      const verdict = isAI ? "AI Generated" : "Real Image";
-      
-      // Save to Supabase with image data
-      await supabase.from('detection_results').insert({
-        content_type: 'image',
-        file_name: selectedFile.name,
-        file_size: selectedFile.size,
-        content_url: base64Image, // Store base64 image
-        ai_score: confidence,
-        ai_verdict: verdict,
-        analysis_details: { 
-          mock_result: true, 
-          file_type: selectedFile.type,
-          analysis_method: 'Mock detection - replace with real API'
-        }
-      });
-      
-      setResult({
-        isAI,
-        confidence,
-        additionalInfo: `Image analysis complete. File size: ${(selectedFile.size / 1024).toFixed(2)} KB. Confidence: ${(confidence * 100).toFixed(1)}%`,
-      });
-      
-      toast({
-        title: "Success",
-        description: "Image analyzed successfully!",
-      });
-    } catch (error) {
-      console.error("Analysis Error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to analyze image. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const sightengineData = await sightengineResponse.json();
+    
+    // Process Sightengine response
+    const aiGenerated = sightengineData.type?.ai_generated || 0;
+    const confidence = aiGenerated;
+    const isAI = confidence > 0.5;
+    const verdict = isAI ? "AI Generated" : "Real Image";
+    
+    // Save to Supabase with real results
+    await supabase.from('detection_results').insert({
+      content_type: 'image',
+      file_name: selectedFile.name,
+      file_size: selectedFile.size,
+      content_url: base64Image,
+      ai_score: confidence,
+      ai_verdict: verdict,
+      analysis_details: { 
+        sightengine_response: sightengineData,
+        file_type: selectedFile.type,
+        analysis_method: 'Sightengine AI Detection API'
+      }
+    });
+    
+    setResult({
+      isAI,
+      confidence,
+      additionalInfo: `Real AI detection complete. File size: ${(selectedFile.size / 1024).toFixed(2)} KB. Confidence: ${(confidence * 100).toFixed(1)}%`,
+    });
+    
+    toast({
+      title: "Success",
+      description: "Image analyzed successfully with real AI detection!",
+    });
+    
+  } catch (error) {
+    console.error("Analysis Error:", error);
+    
+    // Fallback to mock if API fails
+    console.log("Falling back to mock detection due to API error");
+    const confidence = Math.random();
+    const isAI = confidence > 0.5;
+    const verdict = isAI ? "AI Generated (Mock)" : "Real Image (Mock)";
+    
+    setResult({
+      isAI,
+      confidence,
+      additionalInfo: `API unavailable - using mock detection. File size: ${(selectedFile.size / 1024).toFixed(2)} KB. Mock Confidence: ${(confidence * 100).toFixed(1)}%`,
+    });
+    
+    toast({
+      title: "Warning", 
+      description: "API error - showing mock results. Check console for details.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const triggerFileSelect = () => {
     fileInputRef.current?.click();
